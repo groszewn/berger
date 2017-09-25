@@ -1,0 +1,3 @@
+*.pyc
+*.pyo
+/access_keys.txt
