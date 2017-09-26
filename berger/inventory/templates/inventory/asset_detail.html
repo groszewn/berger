@@ -1,0 +1,167 @@
+{% extends my_template %} 
+{% load rest_framework %}
+{% load static %}
+{% load index %}
+
+{% block content %}
+
+<center> <h1>  Asset: {{ asset.item }} </h1> </center> 
+
+<h3><b>Model Number:</b> {{ asset.item.model_number }}</h3>
+<h3><b>Description:</b> {{ asset.item.description }}</h3>
+<br>
+<table id="asset-detail-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+    <th>Asset Tag</th>
+    {% for field in asset_custom_fields%}
+		<th>{{field.field_name}}</th>
+	{% endfor %}
+	</tr>
+</thead>
+<tbody>
+		<tr>
+			<td>{{ asset.asset_tag }}</td>
+			
+				{% for field in asset_custom_fields%}
+					<td default = "">
+						{% for value in asset_custom_vals%}
+							{% if value.asset == asset and value.field == field %}
+								{% if value.value != None %}
+											{{value.value}}
+								{% endif %}
+							{% endif %}
+						{% endfor %}
+					</td>
+				{% endfor %}
+				
+		</tr>
+</tbody>
+</table>
+
+{% if user.is_staff and not asset.disbursement %}
+	{% block assetEdit %}
+		<a id = "assetEdit" asset-id="{{ asset.asset_id }}" class="assetEdit btn btn-primary">Edit This Asset</a>	
+	{% endblock assetEdit %}
+	{% block assetLog %}
+			<a id = "assetLog" asset-id="{{ asset.asset_id }}" class="assetLog btn btn-info">Log Loss/Destruction</a>	
+	{% endblock assetLog %}
+	<a onclick="return confirm('Are you sure you want to delete this asset?')" href="{% url 'custom_admin:delete_asset_from_detail' asset.asset_id %}" class="btn btn-danger">Delete This Asset</a>
+{% endif %}
+
+{% if asset.loan %}
+<h3>Loan Information</h3>
+<table id="inventory-loan" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+        <tr>
+        <th>Loaned To:</th>
+		<th>Loaned By:</th>
+		<th>Item:</th>
+		<th>Quantity:</th>
+		<th>Admin Comment:</th>
+		<th>Time Loaned:</th>
+		</tr>
+    </thead>
+    <tbody>
+    		<tr>
+    			<td>{{asset.loan.admin_name}}</td>
+				<td>{{asset.loan.user_name}}</td>
+				<td>{{asset.loan.item_name}}</td>
+				<td>{{asset.loan.total_quantity}}</td>
+				<td>{{asset.loan.comment}}</td>
+				<td>{{asset.loan.time_loaned}}</td>
+			</tr>
+    </tbody>
+</table>
+{% endif %}
+
+{% if asset.disbursement %}
+<h3>Disbursement Information</h3>
+<table id="inventory-disbursement" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+<thead>
+    <tr>
+		<th>Item Name</th>
+		<th>Quantity</th>
+		<th>Disbursed to</th>
+		<th>Disbursed by</th>
+		<th>User Reason</th>
+		<th>Admin Comment</th>
+		<th>Time Disbursed</th>
+	</tr>
+</thead>
+<tbody>
+		<tr>
+			<td>{{ asset.disbursement.item_name }}</td>
+			<td>{{ asset.disbursement.total_quantity }}</td>
+			<td>{{ asset.disbursement.user_name }}</td>
+			<td>{{ asset.disbursement.admin_name }}</td>
+			<td>{{ asset.disbursement.orig_request.reason}}</td>
+			<td>{{ asset.disbursement.comment}}</td>
+			<td>
+		  		<span style="display: none;">{{ disbursed.time_disbursed|date:"c" }}</span>
+				  {{ disbursed.time_disbursed }}
+			</td>
+		</tr>
+</tbody>
+</table>
+{% endif %}
+
+{############################# ASSET EDIT MODAL LOGIC ##############################}
+<div id="form-modal-assetEdit" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Asset Edit</h4>
+            </div>
+            <div id="form-modal-body-assetEdit" class="modal-body">
+                <p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-assetEdit %}
+<script>
+    $('.assetEdit').click(function() {
+    	asset_id = $(this).attr("asset-id");
+        $('#form-modal-body-assetEdit').load(('../../customadmin/asset/edit/'+asset_id), function () {
+            $('#form-modal-assetEdit').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-assetEdit %}
+
+{############################# ASSET LOG MODAL LOGIC ##############################}
+<div id="form-modal-assetLog" class="modal fade">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				<h4 class="modal-title">Asset Log</h4>
+			</div>
+			<div id="form-modal-body-assetLog" class="modal-body">
+				<p>One fine body&hellip;</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal --> 
+{% block js-assetLog %}
+<script>
+    $('.assetLog').click(function() {
+    	asset_id = $(this).attr("asset-id");
+        $('#form-modal-body-assetLog').load(('../../customadmin/destroy/asset/'+asset_id), function () {
+            $('#form-modal-assetLog').modal('toggle');
+        });
+    });
+</script>
+{% endblock js-assetLog %}
+
+{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+{% endblock %}

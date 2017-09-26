@@ -1,0 +1,204 @@
+{% extends my_template %} 
+
+{% load rest_framework %}
+{% load static %}
+{% load index %}
+{% block content %}
+
+<h2>Upload File</h2>
+{% if user.is_superuser %}
+	<h3>Item Upload:</h3><input type="file" name="File Upload" id="txtFileUpload" accept=".csv" />
+	<div><a href="{% static 'csv_template.csv' %}">Download item template</a><div>
+	<h3>Asset Upload:</h3><input type="file" name="File Upload" id="assetFileUpload" accept=".csv" />
+	<div><a href="{% static 'csv_template_asset.csv' %}">Download asset template</a><div>
+{% endif %}
+
+<h2>Rules:</h2>
+<ul>
+	<li>The document MUST be in a .csv format</li>
+	<li>The first row shall be for column headers only.</li>
+	<li>Do not leave any spaces between the word and the comma, indicating the next item</li>
+	<li>To add custom fields, just add more column headers and the same rules apply</li>
+	<li>Custom field values must obey its type (float types must have a float, not a text, for example).</li>
+	<li><b>If there are any errors, nothing will be uploaded.</b></li>
+</ul>
+<h3>For Item Upload</h3>
+<ul>
+	<li>The implicit column headers are named "Item Name", "Quantity", "Model Number", "Description", and "Tags"</li>
+	<li>For "Tags", to add multiple tags, use "/" to separate between tags</li>
+	<li>The loader will return an error if "Item Name" or "Quantity" cannot be found in the header, or the values are empty.</li>
+</ul>
+
+<h3>For Asset Upload</h3>
+<ul>
+	<li>Name your file your_item_name.csv to create items for the corresponding item.  If the item does not exist, it will be created.</li>
+	<li>The implicit column header is named "Asset Tag"</li>
+	<li>The loader will return an error if "Asset Tag" cannot be found in the header, or the values are empty.</li>
+</ul>
+
+
+<h2>Example item csv file without custom fields</h2>
+Item Name,Quantity,Model Number,Description,Tags<br>
+CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3<br>
+CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3<br>
+CSV Name4,1000,CSV Model #,,csv3/csv4/csv5<br>
+<p><b>**Notice that the above example doesn't have a description in row 3.**</b></p>
+
+<h2>Example item csv file with custom fields</h2>
+Item Name,Quantity,Model Number,Description,Tags,new field!,newFloatField,integerField<br>
+CSV Name2,1000,CSV Model #,CSV Description,csv1/csv2/csv3,hi,1,10000<br>
+CSV Name3,1000,CSV Model #,CSV Description,csv1/csv2/csv3,hi,,2<br>
+CSV Name4,1000,CSV Model #,CSV Description,csv3/csv4/csv5,hi,1.1,<br>
+
+
+<h2>Example asset csv file without custom fields (newitem.csv)</h2>
+Asset Tag<br>
+fgg931-0123<br>
+fdaz88-1234<br>
+fda9d0-1100<br>
+
+<h2>Example asset csv file with custom fields (newitem.csv)</h2>
+Asset Tag, Serial Number, Integer Asset Field<br>
+fgg931-0123, 24432521, 1<br>
+fdaz88-1234, 31432551, 7<br>
+fda9d0-1100, 32523578, 2<br>
+
+<script>
+$(document).ready(function(){
+	 // The event listener for the file upload
+    document.getElementById('txtFileUpload').addEventListener('change', upload, false);
+    document.getElementById('assetFileUpload').addEventListener('change', assetUpload, false);
+    // Method that checks that the browser supports the HTML5 File API
+    function browserSupportFileUpload() {
+        var isCompatible = false;
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+        isCompatible = true;
+        }
+        return isCompatible;
+    }
+    
+	var csrftoken = $.cookie('csrftoken');
+	
+    // Method that reads and processes the selected file
+    function upload(evt) {
+    if (!browserSupportFileUpload()) {
+        alert('The File APIs are not fully supported in this browser!');
+        } else {
+            var data = null;
+            var file = evt.target.files[0];
+            var reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(event) {
+                var csvData = event.target.result;
+                data = $.csv.toArrays(csvData);
+                console.log(data)
+                if (data && data.length > 0) {
+                  $.ajax({
+				       url: '/api/upload/',
+				       //Ajax events
+				       beforeSend: function (xhr,settings) {
+				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
+				         alert('Are you sure you want to upload document.');
+				       },
+				       success: function (e) {
+				         //alert('Upload completed');
+				         window.location.reload();
+				       },
+				       error: function (e) {
+				         //alert('ERROR: ' + e.responseText);
+				          window.location.reload();
+				       },
+				       // Form data
+				       data: {'data[]' : data},
+				       type: 'POST',
+				    });
+                } else {
+                    alert('No data to import!');
+                }
+            };
+            reader.onerror = function() {
+                alert('Unable to read ' + file.fileName);
+            };
+        }
+    }
+    // Method that reads and processes the selected file
+    function assetUpload(evt) {
+    if (!browserSupportFileUpload()) {
+        alert('The File APIs are not fully supported in this browser!');
+        } else {
+            var data = null;
+            var file = evt.target.files[0];
+            var item_name = file.name.split(".csv")[0];
+            console.log(item_name);
+            var reader = new FileReader();
+            reader.readAsText(file);
+            reader.onload = function(event) {
+                var csvData = event.target.result;
+                data = $.csv.toArrays(csvData);
+                if (data && data.length > 0) {
+                  $.ajax({
+				       url: '/api/upload/asset/',
+				       //Ajax events
+				       beforeSend: function (xhr,settings) {
+				         xhr.setRequestHeader("X-CSRFToken", csrftoken);
+				         alert('Are you sure you want to upload document.');
+				       },
+				       success: function (e) {
+				         //alert('Upload completed');
+				         window.location.reload();
+				       },
+				       error: function (e) {
+				         //alert('ERROR: ' + e.responseText);
+				          window.location.reload();
+				       },
+				       // Form data
+				       data: {'data[]' : data, 'item_name':item_name},
+				       type: 'POST',
+				    });
+                } else {
+                    alert('No data to import!');
+                }
+            };
+            reader.onerror = function() {
+                alert('Unable to read ' + file.fileName);
+            };
+        }
+    }
+});
+$('#submit').click(function (event) {
+    event.preventDefault()
+   var file = $('#CSV').get(0).files[0];
+  $.get(file, function(data) {
+	   console.log(data);
+	}, 'text');
+   var formData = new FormData();
+   formData.append('file', file);
+   console.log(formData);
+   console.log("HI CSV");
+   $.ajax({
+       url: '/api/upload',
+       //Ajax events
+       beforeSend: function (e) {
+         alert('Are you sure you want to upload document.');
+       },
+       success: function (e) {
+         alert('Upload completed');
+       },
+       error: function (e) {
+         alert('error ' + e.message);
+       },
+       // Form data
+       data: formData,
+       type: 'POST',
+       //Options to tell jQuery not to process data or worry about content-type.
+       cache: false,
+       contentType: false,
+       processData: false
+    });
+    return false;
+});
+	
+	
+</script>
+
+{% endblock %}

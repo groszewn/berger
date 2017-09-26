@@ -1,0 +1,17 @@
+{% extends 'custom_admin/base.html' %} 
+{#put this at the top so that the base template is "base.html"#}
+
+{% block title %}User Registration{% endblock %}
+{% block head %}User Registration{% endblock %}
+
+{% block content %}
+<h2>Register New User</h2>
+<form method="post" action=".">
+{% csrf_token %}
+{{ form.as_p }}
+<input type="hidden" value="Register User" />
+<button type="submit" class="btn btn-success">Register User</button>
+
+</form>
+
+{% endblock %}

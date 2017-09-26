@@ -1,0 +1,117 @@
+{% extends 'custom_admin/base.html' %} 
+{% load static %}
+{#put this at the top so that the base template is "base.html"#}
+{% block content %}
+<h2>Log</h2>
+
+<div align='right'>Start Date : <input id="startdate" type="text" name='startdate' /></div>
+{% block js %}
+<link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+<script src="//code.jquery.com/jquery-1.12.4.js"></script>
+<script src="//code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<script src={% static 'js/moment.js' %}></script>
+<script src={% static 'js/moment-timezone.js' %}></script>
+<script>
+$(function(){ 
+    $('#startdate').datepicker({
+        dateFormat: 'yy-mm-dd'
+    });
+});
+</script>
+<br>
+{% endblock js %}
+
+{% if log_list %}
+	<table id="log-table" class="table table-hover table-striped table-bordered" cellspacing="0" width="100%">
+        <thead>
+            <tr>
+            <th>Nature of event</th>
+			<th>Initiated by</th>
+			<th>Item</th>
+			<th>Affected User</th>
+			<th>Type of Change</th>
+			<th>Time Occurred</th>
+		</tr>
+        </thead>
+    </table>
+    
+{% else %}
+	<h3>There are no log events to display!</h3>
+{% endif %}
+
+
+{########### TODO: FIGURE OUT WHY I NEED THESE JAVASCRIPT FILES HERE FOR IT TO LOAD DATATABLES PROPERLY #######}
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="//cdn.datatables.net/1.10.2/css/jquery.dataTables.min.css"></style>
+<script type="text/javascript" src="//cdn.datatables.net/1.10.2/js/jquery.dataTables.min.js"></script>
+ 
+ <script>
+ 
+$.fn.dataTable.ext.search.push(
+function (settings, data, dataIndex) {
+    var startDate = Date.parse($('#startdate').val(), 10);
+    var convert = data[5].split('T')[0];
+    console.log(data[5].split('T'));
+    var columnDate = Date.parse(convert); // use data for the age column
+    if ((isNaN(startDate)) || (startDate <= columnDate)) {
+        return true;
+    }
+    return false;
+});
+
+
+	$(document).ready(function(){
+		var item_ids = {{item_list|safe}}
+		var request_ids = {{request_list|safe}}
+	    var table = $('#log-table').dataTable({
+	    	"bProcessing": true,
+	        "aaSorting": [[ 5, "desc" ]],
+	        "aoColumns": [
+	        	{"mData":"nature_of_event",
+	        	"mRender": function ( data, type, full ) {
+	        		if(full["nature_of_event"]==="Request" && request_ids.indexOf(full["request_id"]) >= 0){
+	        			return '<a href="'+"../request_detail/"+full["request_id"]+'">Request</a>';
+	        		} else {
+	        			return data;
+	        		}
+		    	}
+	        	},
+	        	{"mData":"initiating_user"},
+	        	{"mData":"item_name",
+				"mRender": function ( data, type, full ) {
+					if(item_ids.indexOf(full["item_id"]) >= 0) {
+		        		return '<a href="'+"../item/"+full["item_id"]+'">'+data+'</a>';
+		        	} else {
+		        		return data;
+		        	}
+		    	}
+	        	},
+	        	{"mData":"affected_user"},
+	        	{"mData":"change_occurred"},
+	        	{"mData":"time_occurred",
+	        	"mRender": function ( data, type, full ) {
+	        		var a = moment.utc(data);
+	        		console.log(a);
+					return a.local().format("MMM DD, YYYY, h:mm a.");
+		    	}
+		    	}],
+	        "bServerSide": true,
+        	"sAjaxSource": '{% url 'inventory:api' 'Log' %}',
+        	"fnServerData": function (sSource, aoData, fnCallback) {
+				aoData.push( { "name": "datetime", "value": $('#startdate').val() } );
+				$.ajax({
+	             'dataType': 'json',
+	             'type': 'GET',
+	             'url': '{% url 'inventory:api' 'Log' %}',
+	             'data': aoData,
+	             'success': fnCallback
+	          });
+			},
+	    });
+		$('#startdate').change(function () {
+	    	table.fnDraw();
+		});
+	});
+	</script>
+
+{% endblock %}

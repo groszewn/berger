@@ -1,0 +1,15 @@
+{% load crispy_forms_tags %}
+{% load static %}
+
+ <h2>Edit request For <b>{{item_name}}</b></h2>
+ 
+Quantity of <b>{{item_name}}</b> available: {{num_left}}
+<br/>
+<br/>
+ <div class="row">
+	<form id="formID-requestEdit"  action="{% url 'inventory:request_edit' pk %}" class="form-horizontal" method="post">
+	{% csrf_token %}
+	{{ form.as_p }}
+	<input id="formSubmit" type="submit" class="btn btn-submit col-md-offset-2">
+	</form>
+</div>
